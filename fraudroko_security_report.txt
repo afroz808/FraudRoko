@@ -1,0 +1,1577 @@
+===== SECURITY RULE ENGINE =====
+package com.fraudroko.fraudroko_app.engines
+
+class SecurityRuleEngine {
+
+    fun analyze(
+        securitySettings: HashMap<String, Any>,
+        accessibility: HashMap<String, Any>,
+        notificationAccess: HashMap<String, Any>,
+        deviceAdmins: HashMap<String, Any>,
+        overlay: HashMap<String, Any>,
+        bootloader: HashMap<String, Any>
+    ): HashMap<String, Any> {
+
+        var score = 100
+
+        val safe = arrayListOf<HashMap<String, String>>()
+        val warning = arrayListOf<HashMap<String, String>>()
+        val critical = arrayListOf<HashMap<String, String>>()
+
+        fun addSafe(title: String, message: String) {
+            safe.add(
+                hashMapOf(
+                    "title" to title,
+                    "message" to message
+                )
+            )
+        }
+
+        fun addWarning(title: String, message: String, penalty: Int) {
+            score -= penalty
+
+            warning.add(
+                hashMapOf(
+                    "title" to title,
+                    "message" to message
+                )
+            )
+        }
+
+        fun addCritical(title: String, message: String, penalty: Int) {
+            score -= penalty
+
+            critical.add(
+                hashMapOf(
+                    "title" to title,
+                    "message" to message
+                )
+            )
+        }
+
+        // Screen Lock
+        if (securitySettings["screenLockEnabled"] as? Boolean == true) {
+            addSafe(
+                "Screen Lock",
+                "Your phone is protected."
+            )
+        } else {
+            addCritical(
+                "No Screen Lock",
+                "Anyone can unlock your phone.",
+                20
+            )
+        }
+
+        // Encryption
+        if (securitySettings["deviceEncrypted"] as? Boolean == true) {
+            addSafe(
+                "Encryption",
+                "Device encryption is enabled."
+            )
+        } else {
+            addWarning(
+                "Encryption",
+                "Device encryption could not be verified.",
+                5
+            )
+        }
+
+        // Security Patch
+        val securityPatch =
+            securitySettings["securityPatch"]?.toString() ?: "Unknown"
+
+        if (
+            securityPatch.isBlank() ||
+            securityPatch.equals("Unknown", ignoreCase = true)
+        ) {
+            addCritical(
+                "Security Update",
+                "Security patch information is unavailable.",
+                20
+            )
+        } else {
+            addSafe(
+                "Security Update",
+                "Security patch information is available."
+            )
+        }
+
+        // Developer Options
+        if (securitySettings["developerOptionsEnabled"] as? Boolean == true) {
+            addWarning(
+                "Developer Options",
+                "Developer options are enabled.",
+                10
+            )
+        } else {
+            addSafe(
+                "Developer Options",
+                "Developer options are disabled."
+            )
+        }
+
+        // USB Debugging
+        if (securitySettings["usbDebuggingEnabled"] as? Boolean == true) {
+            addWarning(
+                "USB Debugging",
+                "USB debugging is enabled.",
+                10
+            )
+        } else {
+            addSafe(
+                "USB Debugging",
+                "USB debugging is disabled."
+            )
+        }
+
+        // Root
+        if (securitySettings["rootDetected"] as? Boolean == true) {
+            addCritical(
+                "Root Detected",
+                "Root access detected.",
+                40
+            )
+        } else {
+            addSafe(
+                "Root",
+                "Root not detected."
+            )
+        }
+
+        // Emulator
+        if (securitySettings["isEmulator"] as? Boolean == true) {
+            addWarning(
+                "Emulator",
+                "Running on emulator.",
+                5
+            )
+        }
+
+        // Accessibility
+        val accessibilityEnabled =
+            accessibility["accessibilityEnabled"] as? Boolean ?: false
+
+        if (accessibilityEnabled) {
+            addWarning(
+                "Accessibility Services",
+                "One or more accessibility services are enabled.",
+                10
+            )
+        } else {
+            addSafe(
+                "Accessibility",
+                "No accessibility services enabled."
+            )
+        }
+
+        // Notification Access
+        val notificationEnabled =
+            notificationAccess["notificationAccessEnabled"] as? Boolean ?: false
+
+        if (notificationEnabled) {
+            addWarning(
+                "Notification Access",
+                "Apps can read notifications.",
+                10
+            )
+        } else {
+            addSafe(
+                "Notification Access",
+                "No notification access granted."
+            )
+        }
+
+        // Device Admin
+        val hasAdmins =
+            deviceAdmins["hasDeviceAdmins"] as? Boolean ?: false
+
+        if (hasAdmins) {
+            addWarning(
+                "Device Admin",
+                "Device administrator apps are active.",
+                10
+            )
+        } else {
+            addSafe(
+                "Device Admin",
+                "No active device administrators."
+            )
+        }
+
+        // Overlay
+        val overlayEnabled =
+            overlay["overlayEnabled"] as? Boolean ?: false
+
+        if (overlayEnabled) {
+            addWarning(
+                "Overlay Apps",
+                "Apps can display over other apps.",
+                10
+            )
+        } else {
+            addSafe(
+                "Overlay",
+                "No overlay permission detected."
+            )
+        }
+
+        // Bootloader
+        val unlocked =
+            bootloader["bootloaderUnlocked"] as? Boolean ?: false
+
+        if (unlocked) {
+            addWarning(
+                "Bootloader",
+                "Bootloader appears unlocked.",
+                10
+            )
+        } else {
+            addSafe(
+                "Bootloader",
+                "Bootloader appears locked."
+            )
+        }
+
+        if (score < 0) score = 0
+        if (score > 100) score = 100
+
+        return hashMapOf(
+            "score" to score,
+            "safe" to safe,
+            "warning" to warning,
+            "critical" to critical
+        )
+    }
+}
+===== HIGH RISK APPS PROVIDER =====
+
+===== SECURITY REPORT PROVIDER =====
+package com.fraudroko.fraudroko_app.providers
+
+import android.content.Context
+import com.fraudroko.fraudroko_app.engines.SecurityRuleEngine
+import com.fraudroko.fraudroko_app.notifications.NotificationHelper
+
+class SecurityReportProvider(
+    private val context: Context
+) {
+
+    private val deviceInfoProvider =
+        DeviceInfoProvider()
+
+    private val bootloaderProvider =
+        BootloaderProvider()
+
+    private val overlayAppsProvider =
+        OverlayAppsProvider(context)
+
+    private val securitySettingsProvider =
+        SecuritySettingsProvider(context)
+
+    private val installedAppsProvider =
+        InstalledAppsProvider(context)
+
+    private val accessibilityProvider =
+        AccessibilityProvider(context)
+
+    private val notificationAccessProvider =
+        NotificationAccessProvider(context)
+
+    private val deviceAdminProvider =
+        DeviceAdminProvider(context)
+
+    private val securityRuleEngine =
+        SecurityRuleEngine()
+
+    private val notificationHelper =
+        NotificationHelper(context)
+
+    fun getSecurityReport(): HashMap<String, Any> {
+
+        val report =
+            hashMapOf<String, Any>()
+
+        val securitySettings =
+            securitySettingsProvider.getSecuritySettings()
+
+        val installedApps =
+            installedAppsProvider.getInstalledApps()
+
+        val accessibility =
+            accessibilityProvider.getAccessibilityServices()
+
+        val notificationAccess =
+            notificationAccessProvider.getNotificationAccess()
+
+        val deviceAdmins =
+            deviceAdminProvider.getDeviceAdmins()
+
+        val overlay =
+            overlayAppsProvider.getOverlayStatus()
+
+        val bootloader =
+            bootloaderProvider.getBootloaderStatus()
+
+        val securityAnalysis =
+            securityRuleEngine.analyze(
+                securitySettings,
+                accessibility,
+                notificationAccess,
+                deviceAdmins,
+                overlay,
+                bootloader
+            )
+
+        /*
+         * Suspicious hidden-app alert.
+         *
+         * We only alert when:
+         * - non-system app
+         * - enabled
+         * - installed from an untrusted source
+         * - no normal launcher entry
+         *
+         * This avoids treating normal Android/system components as hidden threats.
+         */
+        @Suppress("UNCHECKED_CAST")
+        val installedAppList =
+            installedApps["apps"]
+                as? ArrayList<HashMap<String, Any>>
+                ?: arrayListOf()
+
+        for (app in installedAppList) {
+            val packageName =
+                app["packageName"] as? String
+                    ?: continue
+
+            val appName =
+                app["appName"] as? String
+                    ?: packageName
+
+            val systemApp =
+                app["systemApp"] as? Boolean
+                    ?: false
+
+            val enabled =
+                app["enabled"] as? Boolean
+                    ?: false
+
+            val installer =
+                app["installer"] as? Map<*, *>
+
+            val trustedInstaller =
+                installer?.get("trusted") as? Boolean
+                    ?: false
+
+            if (systemApp || !enabled || trustedInstaller) {
+                continue
+            }
+
+            val hasLauncher =
+                try {
+                    context.packageManager
+                        .getLaunchIntentForPackage(packageName) != null
+                } catch (_: Exception) {
+                    true
+                }
+
+            if (!hasLauncher) {
+                notificationHelper.showSecurityAlert(
+                    title = "Suspicious hidden app: $appName",
+                    message =
+                        "$appName is installed from an untrusted source and does not appear to have a normal launcher entry. Review this app.",
+                    notificationId =
+                        "hidden_app_$packageName".hashCode(),
+                    packageName = packageName,
+                    securityType = "hidden_app"
+                )
+            }
+        }
+
+        /*
+         * Find application name from package name.
+         */
+        fun getAppName(
+            packageName: String
+        ): String {
+
+            if (packageName.isBlank()) {
+                return ""
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val apps =
+                installedApps["apps"]
+                    as? ArrayList<HashMap<String, Any>>
+                    ?: arrayListOf()
+
+            for (app in apps) {
+
+                val appPackage =
+                    app["packageName"] as? String
+                        ?: continue
+
+                if (appPackage == packageName) {
+
+                    return app["appName"] as? String
+                        ?: packageName
+                }
+            }
+
+            return packageName
+        }
+
+        /*
+         * Get enabled accessibility packages.
+         */
+        fun getAccessibilityPackages():
+            List<String> {
+
+            @Suppress("UNCHECKED_CAST")
+            val services =
+                accessibility["services"]
+                    as? ArrayList<HashMap<String, String>>
+                    ?: arrayListOf()
+
+            return services
+                .mapNotNull {
+                    it["packageName"]
+                }
+                .filter {
+                    it.isNotBlank()
+                }
+                .distinct()
+        }
+
+        /*
+         * Get notification access packages.
+         */
+        fun getNotificationPackages():
+            List<String> {
+
+            @Suppress("UNCHECKED_CAST")
+            val services =
+                notificationAccess["services"]
+                    as? ArrayList<HashMap<String, String>>
+                    ?: arrayListOf()
+
+            return services
+                .mapNotNull {
+                    it["packageName"]
+                }
+                .filter {
+                    it.isNotBlank()
+                }
+                .distinct()
+        }
+
+        /*
+         * Get active device-admin packages.
+         */
+        fun getDeviceAdminPackages():
+            List<String> {
+
+            @Suppress("UNCHECKED_CAST")
+            val admins =
+                deviceAdmins["deviceAdmins"]
+                    as? ArrayList<HashMap<String, String>>
+                    ?: arrayListOf()
+
+            return admins
+                .mapNotNull {
+                    it["packageName"]
+                }
+                .filter {
+                    it.isNotBlank()
+                }
+                .distinct()
+        }
+
+        /*
+         * Security warnings
+         */
+        @Suppress("UNCHECKED_CAST")
+        val warnings =
+            securityAnalysis["warning"]
+                as? ArrayList<HashMap<String, String>>
+                ?: arrayListOf()
+
+        for (warning in warnings) {
+
+            val originalTitle =
+                warning["title"]
+                    ?: continue
+
+            val originalMessage =
+                warning["message"]
+                    ?: continue
+
+            when (originalTitle) {
+
+                "Accessibility Services" -> {
+
+                    val packages =
+                        getAccessibilityPackages()
+
+                    if (packages.isEmpty()) {
+
+                        notificationHelper.showSecurityAlert(
+                            title =
+                                "Accessibility access enabled",
+                            message =
+                                "One or more accessibility services are enabled. Review Accessibility settings if you do not recognize them.",
+                            notificationId =
+                                "accessibility".hashCode(),
+                            securityType =
+                                "accessibility"
+                        )
+
+                    } else {
+
+                        for (packageName in packages) {
+
+                            val appName =
+                                getAppName(packageName)
+
+                            notificationHelper.showSecurityAlert(
+                                title =
+                                    "Accessibility access: $appName",
+                                message =
+                                    "$appName has Accessibility access. Review it if you do not recognize this app.",
+                                notificationId =
+                                    "accessibility_$packageName"
+                                        .hashCode(),
+                                packageName =
+                                    packageName,
+                                securityType =
+                                    "accessibility"
+                            )
+                        }
+                    }
+                }
+
+                "Notification Access" -> {
+
+                    // Scan result is kept, but no standalone notification is sent.
+
+                }
+
+                "Device Admin" -> {
+
+                    val packages =
+                        getDeviceAdminPackages()
+
+                    if (packages.isEmpty()) {
+
+                        notificationHelper.showSecurityAlert(
+                            title =
+                                "Device administrator active",
+                            message =
+                                originalMessage,
+                            notificationId =
+                                "device_admin"
+                                    .hashCode(),
+                            securityType =
+                                "device_admin"
+                        )
+
+                    } else {
+
+                        for (packageName in packages) {
+
+                            val appName =
+                                getAppName(packageName)
+
+                            notificationHelper.showSecurityAlert(
+                                title =
+                                    "Device admin: $appName",
+                                message =
+                                    "$appName has device administrator privileges. Review it if you do not recognize this app.",
+                                notificationId =
+                                    "device_admin_$packageName"
+                                        .hashCode(),
+                                packageName =
+                                    packageName,
+                                securityType =
+                                    "device_admin"
+                            )
+                        }
+                    }
+                }
+
+                "Overlay Apps" -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            "Overlay permission enabled",
+                        message =
+                            "An app can display content over other apps. Review this permission if you do not recognize the app.",
+                        notificationId =
+                            "overlay".hashCode(),
+                        securityType =
+                            "overlay"
+                    )
+                }
+
+                "Developer Options" -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            "Developer Options enabled",
+                        message =
+                            "Developer Options are enabled. Review them if you did not enable them.",
+                        notificationId =
+                            "developer_options".hashCode(),
+                        securityType =
+                            "developer_options"
+                    )
+                }
+
+                "USB Debugging" -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            "USB Debugging enabled",
+                        message =
+                            "USB debugging is enabled. Review Developer Options if you did not enable it.",
+                        notificationId =
+                            "usb_debugging".hashCode(),
+                        securityType =
+                            "usb_debugging"
+                    )
+                }
+
+                else -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            originalTitle,
+                        message =
+                            originalMessage,
+                        notificationId =
+                            originalTitle.hashCode()
+                    )
+                }
+            }
+        }
+
+        /*
+         * Security critical alerts
+         */
+        @Suppress("UNCHECKED_CAST")
+        val criticalAlerts =
+            securityAnalysis["critical"]
+                as? ArrayList<HashMap<String, String>>
+                ?: arrayListOf()
+
+        for (critical in criticalAlerts) {
+
+            val originalTitle =
+                critical["title"]
+                    ?: continue
+
+            val originalMessage =
+                critical["message"]
+                    ?: continue
+
+            when (originalTitle) {
+
+                "No Screen Lock" -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            "Critical: No Screen Lock",
+                        message =
+                            "Your phone does not have a screen lock. Anyone with physical access may be able to unlock it.",
+                        notificationId =
+                            "critical_screen_lock"
+                                .hashCode()
+                    )
+                }
+
+                "Root Detected" -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            "Critical: Root detected",
+                        message =
+                            "Root access was detected on this device. Review your device security configuration.",
+                        notificationId =
+                            "critical_root"
+                                .hashCode()
+                    )
+                }
+
+                else -> {
+
+                    notificationHelper.showSecurityAlert(
+                        title =
+                            "Critical: $originalTitle",
+                        message =
+                            originalMessage,
+                        notificationId =
+                            "critical_$originalTitle"
+                                .hashCode()
+                    )
+                }
+            }
+        }
+
+        report["deviceInfo"] =
+            deviceInfoProvider.getDeviceInfo()
+
+        report["securitySettings"] =
+            securitySettings
+
+        report["installedApps"] =
+            installedApps
+
+        report["accessibility"] =
+            accessibility
+
+        report["notificationAccess"] =
+            notificationAccess
+
+        report["deviceAdmins"] =
+            deviceAdmins
+
+        report["overlay"] =
+            overlay
+
+        report["bootloader"] =
+            bootloader
+
+        report["securityAnalysis"] =
+            securityAnalysis
+
+        return report
+    }
+}
+===== SECURITY CHANNEL =====
+package com.fraudroko.fraudroko_app.channels
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.content.ContentUris
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.DocumentsContract
+import android.provider.MediaStore
+import android.provider.OpenableColumns
+import com.fraudroko.fraudroko_app.providers.SecurityReportProvider
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
+import java.io.File
+import java.io.FileOutputStream
+
+class SecurityChannel(
+    messenger: BinaryMessenger,
+    private val context: Context
+) : MethodChannel.MethodCallHandler {
+
+    companion object {
+        private const val CHANNEL = "com.fraudroko/security"
+        private const val FOLDER_REQUEST_CODE = 7341
+        private const val PREFS = "fraudroko_apk_storage"
+        private const val FOLDER_URI = "apk_folder_uri"
+    }
+
+    private val channel =
+        MethodChannel(messenger, CHANNEL)
+
+    private val securityReportProvider =
+        SecurityReportProvider(context)
+
+    private var pendingFolderResult:
+        MethodChannel.Result? = null
+
+    init {
+        channel.setMethodCallHandler(this)
+    }
+
+    override fun onMethodCall(
+        call: MethodCall,
+        result: MethodChannel.Result
+    ) {
+
+        when (call.method) {
+
+            "getSecurityReport" -> {
+                result.success(
+                    securityReportProvider.getSecurityReport()
+                )
+            }
+
+            "getDailySecurityReports" -> {
+                result.success(
+                    getDailySecurityReports()
+                )
+            }
+
+            "scanApkFiles" -> {
+                result.success(scanApkFiles())
+            }
+
+            "deleteApkFile" -> {
+                val uriString =
+                    call.argument<String>("uri")
+
+                if (uriString.isNullOrBlank()) {
+                    result.success(false)
+                } else {
+                    result.success(
+                        deleteApk(Uri.parse(uriString))
+                    )
+                }
+            }
+
+            else -> {
+                result.notImplemented()
+            }
+        }
+    }
+
+    private fun getDailySecurityReports():
+        ArrayList<HashMap<String, Any>> {
+
+        val storage =
+            com.fraudroko.fraudroko_app.monitor
+                .DailySecurityReportStorage(context)
+
+        val reports =
+            ArrayList<HashMap<String, Any>>()
+
+        for (report in storage.getAllReports()) {
+
+            val item =
+                hashMapOf<String, Any>(
+                    "day" to report.optString("day"),
+                    "timestamp" to report.optLong("timestamp"),
+                    "developerOptionsEnabled" to
+                        report.optBoolean("developerOptionsEnabled"),
+                    "usbDebuggingEnabled" to
+                        report.optBoolean("usbDebuggingEnabled"),
+                    "screenLockEnabled" to
+                        report.optBoolean("screenLockEnabled"),
+                    "hiddenApps" to
+                        jsonArrayToList(report.optJSONArray("hiddenApps")),
+                    "unknownSourceApps" to
+                        jsonArrayToList(report.optJSONArray("unknownSourceApps")),
+                    "accessibilityApps" to
+                        jsonArrayToList(report.optJSONArray("accessibilityApps")),
+                    "notificationAccessApps" to
+                        jsonArrayToList(report.optJSONArray("notificationAccessApps")),
+                    "deviceAdminApps" to
+                        jsonArrayToList(report.optJSONArray("deviceAdminApps"))
+                )
+
+            reports.add(item)
+        }
+
+        return reports
+    }
+
+    private fun jsonArrayToList(
+        array: org.json.JSONArray?
+    ): ArrayList<String> {
+
+        val list =
+            ArrayList<String>()
+
+        if (array == null) {
+            return list
+        }
+
+        for (i in 0 until array.length()) {
+            val value =
+                array.optString(i)
+
+            if (value.isNotBlank()) {
+                list.add(value)
+            }
+        }
+
+        return list
+    }
+
+    private fun chooseFolder(
+        result: MethodChannel.Result
+    ) {
+
+        val activity =
+            context as? Activity
+
+        if (activity == null) {
+            result.error(
+                "NO_ACTIVITY",
+                "Folder picker requires an Activity.",
+                null
+            )
+            return
+        }
+
+        if (pendingFolderResult != null) {
+            result.error(
+                "BUSY",
+                "Folder picker is already open.",
+                null
+            )
+            return
+        }
+
+        pendingFolderResult = result
+
+        val intent =
+            Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+                        Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+                )
+            }
+
+        activity.startActivityForResult(
+            intent,
+            FOLDER_REQUEST_CODE
+        )
+    }
+
+    fun handleActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ): Boolean {
+
+        if (requestCode != FOLDER_REQUEST_CODE) {
+            return false
+        }
+
+        val result = pendingFolderResult
+        pendingFolderResult = null
+
+        if (result == null) {
+            return true
+        }
+
+        if (
+            resultCode != Activity.RESULT_OK ||
+            data?.data == null
+        ) {
+            result.success(emptyList<HashMap<String, Any>>())
+            return true
+        }
+
+        val uri = data.data!!
+
+        try {
+
+            val takeFlags =
+                data.flags and (
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                takeFlags
+            )
+
+        } catch (_: Exception) {
+            // Some providers do not support persisted permission.
+            // The current access can still be used.
+        }
+
+        context.getSharedPreferences(
+            PREFS,
+            Context.MODE_PRIVATE
+        ).edit()
+            .putString(FOLDER_URI, uri.toString())
+            .apply()
+
+        result.success(
+            scanFolder(uri)
+        )
+
+        return true
+    }
+
+    private fun scanApkFiles():
+        ArrayList<HashMap<String, Any>> {
+
+        val results =
+            linkedMapOf<String, HashMap<String, Any>>()
+
+        fun addApk(item: HashMap<String, Any>) {
+            if (
+                item["validApk"] == true &&
+                item["installed"] != true
+            ) {
+                val uri = item["uri"]?.toString()
+                if (!uri.isNullOrBlank()) {
+                    results[uri] = item
+                }
+            }
+        }
+
+        // 1. MediaStore — public/shared storage.
+        try {
+            val collection =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    MediaStore.Files.getContentUri(
+                        MediaStore.VOLUME_EXTERNAL
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Files.getContentUri("external")
+                }
+
+            val projection = arrayOf(
+                MediaStore.Files.FileColumns._ID,
+                MediaStore.Files.FileColumns.DISPLAY_NAME,
+                MediaStore.Files.FileColumns.MIME_TYPE
+            )
+
+            val selection =
+                "(" +
+                    MediaStore.Files.FileColumns.DISPLAY_NAME +
+                    " LIKE ? OR " +
+                    MediaStore.Files.FileColumns.MIME_TYPE +
+                    " = ?" +
+                ")"
+
+            val selectionArgs =
+                arrayOf(
+                    "%.apk",
+                    "application/vnd.android.package-archive"
+                )
+
+            context.contentResolver.query(
+                collection,
+                projection,
+                selection,
+                selectionArgs,
+                MediaStore.Files.FileColumns.DATE_MODIFIED + " DESC"
+            )?.use { cursor ->
+
+                val idIndex =
+                    cursor.getColumnIndex(
+                        MediaStore.Files.FileColumns._ID
+                    )
+
+                val nameIndex =
+                    cursor.getColumnIndex(
+                        MediaStore.Files.FileColumns.DISPLAY_NAME
+                    )
+
+                while (cursor.moveToNext()) {
+                    if (idIndex < 0 || nameIndex < 0) continue
+
+                    val name =
+                        cursor.getString(nameIndex) ?: continue
+
+                    if (!name.lowercase().endsWith(".apk")) continue
+
+                    val id = cursor.getLong(idIndex)
+
+                    val uri =
+                        ContentUris.withAppendedId(
+                            collection,
+                            id
+                        )
+
+                    addApk(
+                        inspectApk(uri, name)
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            // Continue with filesystem scan.
+        }
+
+        // 2. Directly accessible shared-storage directories.
+        val roots = linkedSetOf<File>()
+
+        @Suppress("DEPRECATION")
+        run {
+            roots.add(
+                android.os.Environment
+                    .getExternalStorageDirectory()
+            )
+        }
+
+        @Suppress("DEPRECATION")
+        run {
+            roots.add(
+                android.os.Environment
+                    .getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS
+                    )
+            )
+        }
+
+        roots.add(
+            File(
+                android.os.Environment
+                    .getExternalStorageDirectory(),
+                "Download"
+            )
+        )
+
+        roots.add(
+            File(
+                android.os.Environment
+                    .getExternalStorageDirectory(),
+                "Downloads"
+            )
+        )
+
+        val fileResults =
+            arrayListOf<HashMap<String, Any>>()
+
+        for (root in roots) {
+            scanDirectoryForApks(
+                root,
+                fileResults,
+                0
+            )
+        }
+
+        fileResults.forEach { addApk(it) }
+
+        return ArrayList(results.values)
+    }
+
+    private fun scanDirectoryForApks(
+        directory: File,
+        results: ArrayList<HashMap<String, Any>>,
+        depth: Int
+    ) {
+        if (
+            depth > 2 ||
+            !directory.exists() ||
+            !directory.isDirectory
+        ) {
+            return
+        }
+
+        try {
+            directory.listFiles()?.forEach { file ->
+
+                if (file.isDirectory) {
+                    scanDirectoryForApks(
+                        file,
+                        results,
+                        depth + 1
+                    )
+                    return@forEach
+                }
+
+                if (
+                    !file.isFile ||
+                    !file.name
+                        .lowercase()
+                        .endsWith(".apk")
+                ) {
+                    return@forEach
+                }
+
+                val item =
+                    inspectApkFile(file)
+
+                if (item["validApk"] == true) {
+                    results.add(item)
+                }
+            }
+        } catch (_: SecurityException) {
+            // Ignore directories Android does not allow us to read.
+        } catch (_: Exception) {
+            // Ignore inaccessible files.
+        }
+    }
+
+    private fun inspectApkFile(
+        file: File
+    ): HashMap<String, Any> {
+
+        return try {
+
+            val packageInfo =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+                    context.packageManager
+                        .getPackageArchiveInfo(
+                            file.absolutePath,
+                            PackageManager.PackageInfoFlags.of(
+                                PackageManager.GET_PERMISSIONS.toLong()
+                            )
+                        )
+
+                } else {
+
+                    @Suppress("DEPRECATION")
+                    context.packageManager
+                        .getPackageArchiveInfo(
+                            file.absolutePath,
+                            PackageManager.GET_PERMISSIONS
+                        )
+                }
+
+            if (packageInfo == null) {
+                return invalidFileApk(file)
+            }
+
+            val packageName =
+                packageInfo.packageName
+
+            val appName =
+                try {
+                    packageInfo.applicationInfo?.let {
+                        context.packageManager
+                            .getApplicationLabel(it)
+                            .toString()
+                    } ?: packageName
+                } catch (_: Exception) {
+                    packageName
+                }
+
+            hashMapOf(
+                "uri" to Uri.fromFile(file).toString(),
+                "fileName" to file.name,
+                "appName" to appName,
+                "packageName" to packageName,
+                "versionName" to (
+                    packageInfo.versionName ?: ""
+                ),
+                "validApk" to true,
+                "installed" to isPackageInstalled(packageName),
+                "permissions" to (
+                    packageInfo.requestedPermissions
+                        ?.toList()
+                        ?: emptyList<String>()
+                )
+            )
+
+        } catch (_: Exception) {
+            invalidFileApk(file)
+        }
+    }
+
+    private fun invalidFileApk(
+        file: File
+    ): HashMap<String, Any> {
+        return hashMapOf(
+            "uri" to Uri.fromFile(file).toString(),
+            "fileName" to file.name,
+            "appName" to "Invalid APK",
+            "packageName" to "",
+            "versionName" to "",
+            "validApk" to false,
+            "installed" to false,
+            "permissions" to emptyList<String>()
+        )
+    }
+
+    private fun scanSavedFolder():
+        ArrayList<HashMap<String, Any>> {
+
+        val uriString =
+            context.getSharedPreferences(
+                PREFS,
+                Context.MODE_PRIVATE
+            ).getString(FOLDER_URI, null)
+
+        if (uriString.isNullOrBlank()) {
+            return arrayListOf()
+        }
+
+        return scanFolder(Uri.parse(uriString))
+    }
+
+    private fun scanFolder(
+        treeUri: Uri
+    ): ArrayList<HashMap<String, Any>> {
+
+        val results =
+            arrayListOf<HashMap<String, Any>>()
+
+        try {
+
+            val treeDocumentId =
+                DocumentsContract.getTreeDocumentId(
+                    treeUri
+                )
+
+            val childrenUri =
+                DocumentsContract.buildChildDocumentsUriUsingTree(
+                    treeUri,
+                    treeDocumentId
+                )
+
+            val projection = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE
+            )
+
+            context.contentResolver.query(
+                childrenUri,
+                projection,
+                null,
+                null,
+                null
+            )?.use { cursor ->
+
+                val idIndex =
+                    cursor.getColumnIndex(
+                        DocumentsContract.Document.COLUMN_DOCUMENT_ID
+                    )
+
+                val nameIndex =
+                    cursor.getColumnIndex(
+                        DocumentsContract.Document.COLUMN_DISPLAY_NAME
+                    )
+
+                val mimeIndex =
+                    cursor.getColumnIndex(
+                        DocumentsContract.Document.COLUMN_MIME_TYPE
+                    )
+
+                while (cursor.moveToNext()) {
+
+                    val name =
+                        if (nameIndex >= 0) {
+                            cursor.getString(nameIndex)
+                        } else {
+                            ""
+                        }
+
+                    if (
+                        name.isBlank() ||
+                        !name.lowercase().endsWith(".apk")
+                    ) {
+                        continue
+                    }
+
+                    val documentId =
+                        if (idIndex >= 0) {
+                            cursor.getString(idIndex)
+                        } else {
+                            continue
+                        }
+
+                    val documentUri =
+                        DocumentsContract
+                            .buildDocumentUriUsingTree(
+                                treeUri,
+                                documentId
+                            )
+
+                    val item =
+                        inspectApk(
+                            documentUri,
+                            name
+                        )
+
+                    results.add(item)
+                }
+            }
+
+        } catch (_: Exception) {
+            return arrayListOf()
+        }
+
+        return results
+    }
+
+    private fun inspectApk(
+        uri: Uri,
+        fileName: String
+    ): HashMap<String, Any> {
+
+        val tempFile =
+            File.createTempFile(
+                "fraudroko_apk_",
+                ".apk",
+                context.cacheDir
+            )
+
+        return try {
+
+            context.contentResolver
+                .openInputStream(uri)
+                ?.use { input ->
+
+                    FileOutputStream(tempFile)
+                        .use { output ->
+
+                        val buffer =
+                            ByteArray(8192)
+
+                        var length: Int
+
+                        while (
+                            input.read(buffer)
+                                .also { length = it } > 0
+                        ) {
+                            output.write(
+                                buffer,
+                                0,
+                                length
+                            )
+                        }
+                    }
+                }
+                ?: return invalidApk(
+                    uri,
+                    fileName
+                )
+
+            val packageInfo =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+                    context.packageManager
+                        .getPackageArchiveInfo(
+                            tempFile.absolutePath,
+                            PackageManager.PackageInfoFlags.of(
+                                PackageManager.GET_PERMISSIONS.toLong()
+                            )
+                        )
+
+                } else {
+
+                    @Suppress("DEPRECATION")
+                    context.packageManager
+                        .getPackageArchiveInfo(
+                            tempFile.absolutePath,
+                            PackageManager.GET_PERMISSIONS
+                        )
+                }
+
+            if (packageInfo == null) {
+                return invalidApk(
+                    uri,
+                    fileName
+                )
+            }
+
+            val packageName =
+                packageInfo.packageName
+
+            val appName =
+                try {
+
+                    packageInfo.applicationInfo?.let {
+                        context.packageManager
+                            .getApplicationLabel(it)
+                            .toString()
+                    } ?: packageName
+
+                } catch (_: Exception) {
+                    packageName
+                }
+
+            val installed =
+                isPackageInstalled(packageName)
+
+            val permissions =
+                packageInfo.requestedPermissions
+                    ?.toList()
+                    ?: emptyList()
+
+            hashMapOf(
+                "fileName" to fileName,
+                "appName" to appName,
+                "packageName" to packageName,
+                "versionName" to (
+                    packageInfo.versionName ?: ""
+                ),
+                "validApk" to true,
+                "installed" to installed,
+                "uri" to uri.toString(),
+                "permissions" to permissions
+            )
+
+        } catch (_: Exception) {
+
+            invalidApk(
+                uri,
+                fileName
+            )
+
+        } finally {
+
+            tempFile.delete()
+        }
+    }
+
+    private fun invalidApk(
+        uri: Uri,
+        fileName: String
+    ): HashMap<String, Any> {
+
+        return hashMapOf(
+            "fileName" to fileName,
+            "appName" to "Invalid APK",
+            "packageName" to "",
+            "versionName" to "",
+            "validApk" to false,
+            "installed" to false,
+            "uri" to uri.toString(),
+            "permissions" to emptyList<String>()
+        )
+    }
+
+    private fun isPackageInstalled(
+        packageName: String
+    ): Boolean {
+
+        return try {
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+                context.packageManager
+                    .getPackageInfo(
+                        packageName,
+                        PackageManager.PackageInfoFlags.of(0)
+                    )
+
+            } else {
+
+                @Suppress("DEPRECATION")
+                context.packageManager
+                    .getPackageInfo(
+                        packageName,
+                        0
+                    )
+            }
+
+            true
+
+        } catch (_: Exception) {
+
+            false
+        }
+    }
+
+    private fun deleteApk(
+        uri: Uri
+    ): Boolean {
+
+        return try {
+
+            DocumentsContract.deleteDocument(
+                context.contentResolver,
+                uri
+            )
+
+        } catch (_: Exception) {
+
+            false
+        }
+    }
+}

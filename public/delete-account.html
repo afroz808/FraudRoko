@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FraudRoko - Account Deletion</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 32px 20px;
+      line-height: 1.6;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .email {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .lang {
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    a {
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+
+<div id="content"></div>
+
+<script>
+  const language = (navigator.language || navigator.userLanguage || "en")
+      .toLowerCase();
+
+  const email = "fraudroko.support@gmail.com";
+
+  const translations = {
+    hi: {
+      title: "FraudRoko Account Deletion",
+      intro: "अगर आप अपना FraudRoko account और उससे जुड़ा account data delete करना चाहते हैं, तो नीचे दिए गए email पर deletion request भेजें:",
+      deletedTitle: "क्या delete किया जाएगा?",
+      deleted: [
+        "आपका FraudRoko Firebase Authentication account",
+        "आपका account-specific premium entitlement data",
+        "आपका account-specific course entitlement data"
+      ],
+      retainedTitle: "कौन-सा data रखा जा सकता है?",
+      retained: "कुछ payment या transaction records security, fraud prevention, accounting या legal requirements के कारण retain किए जा सकते हैं।",
+      requestTitle: "Deletion request",
+      request: "अपनी request में अपने FraudRoko account से जुड़े email address को शामिल करें, ताकि हम आपकी request process कर सकें।",
+      lang: "भाषा: हिन्दी"
+    },
+
+    mr: {
+      title: "FraudRoko Account Deletion",
+      intro: "तुमचे FraudRoko account आणि त्याच्याशी संबंधित account data delete करायचा असल्यास, खाली दिलेल्या email वर deletion request पाठवा:",
+      deletedTitle: "काय delete केले जाईल?",
+      deleted: [
+        "तुमचे FraudRoko Firebase Authentication account",
+        "तुमचा account-specific premium entitlement data",
+        "तुमचा account-specific course entitlement data"
+      ],
+      retainedTitle: "कोणता data ठेवला जाऊ शकतो?",
+      retained: "काही payment किंवा transaction records security, fraud prevention, accounting किंवा legal requirements मुळे retain केले जाऊ शकतात.",
+      requestTitle: "Deletion request",
+      request: "तुमच्या request मध्ये तुमच्या FraudRoko account शी संबंधित email address समाविष्ट करा, जेणेकरून आम्ही तुमची request process करू शकू.",
+      lang: "भाषा: मराठी"
+    },
+
+    en: {
+      title: "FraudRoko Account Deletion",
+      intro: "If you want to delete your FraudRoko account and associated account data, please send a deletion request to:",
+      deletedTitle: "What will be deleted?",
+      deleted: [
+        "Your FraudRoko Firebase Authentication account",
+        "Account-specific premium entitlement data",
+        "Account-specific course entitlement data"
+      ],
+      retainedTitle: "Data that may be retained",
+      retained: "Certain payment or transaction records may be retained where required for security, fraud prevention, accounting, or legal purposes.",
+      requestTitle: "Deletion request",
+      request: "Include the email address associated with your FraudRoko account in your deletion request so that we can process the request.",
+      lang: "Language: English"
+    }
+  };
+
+  let selectedLanguage = "en";
+
+  if (language.startsWith("hi")) {
+    selectedLanguage = "hi";
+  } else if (language.startsWith("mr")) {
+    selectedLanguage = "mr";
+  }
+
+  const t = translations[selectedLanguage];
+
+  document.documentElement.lang = selectedLanguage;
+
+  document.getElementById("content").innerHTML = `
+    <div class="lang">${t.lang}</div>
+
+    <h1>${t.title}</h1>
+
+    <p>${t.intro}</p>
+
+    <p class="email">
+      <a href="mailto:${email}?subject=FraudRoko%20Account%20Deletion%20Request">
+        ${email}
+      </a>
+    </p>
+
+    <h2>${t.deletedTitle}</h2>
+
+    <ul>
+      ${t.deleted.map(item => `<li>${item}</li>`).join("")}
+    </ul>
+
+    <h2>${t.retainedTitle}</h2>
+
+    <p>${t.retained}</p>
+
+    <h2>${t.requestTitle}</h2>
+
+    <p>${t.request}</p>
+  `;
+</script>
+
+</body>
+</html>

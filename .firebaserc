@@ -1,0 +1,19 @@
+{
+  "projects": {
+    "staging": "fraudroko-654c1",
+    "default": "fraudroko-654c1"
+  },
+  "targets": {
+    "fraudroko-654c1": {
+      "hosting": {
+        "delete": [
+          "fraudroko-delete"
+        ],
+        "admin": [
+          "fraudroko-654c1"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

@@ -1,0 +1,4 @@
+cd ~/Desktop/FraudRoko
+
+sed -n '1,260p' \
+lib/features/security/data/services/apk_file_picker_service.dart

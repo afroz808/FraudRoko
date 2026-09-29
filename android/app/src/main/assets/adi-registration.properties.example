@@ -1,0 +1,3 @@
+# Do not paste your real account token into this example file.
+# Run: ./scripts/create_adi_registration.sh
+# The script creates android/app/src/main/assets/adi-registration.properties

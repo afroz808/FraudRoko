@@ -1,0 +1,7 @@
+Analyzing FraudRoko...                                          
+
+  error • The getter 'titleKeyKey' isn't defined for the type 'SecurityIssue' • lib/features/security/presentation/screens/security_report_screen.dart:449:54 • undefined_getter
+  error • The getter 'messageKeyKey' isn't defined for the type 'SecurityIssue' • lib/features/security/presentation/screens/security_report_screen.dart:457:54 • undefined_getter
+  error • The getter 'actionKeyKey' isn't defined for the type 'SecurityIssue' • lib/features/security/presentation/screens/security_report_screen.dart:482:52 • undefined_getter
+
+3 issues found. (ran in 3.9s)

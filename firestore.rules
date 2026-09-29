@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'owner'
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if isOwner() && request.auth.uid == adminId;
+    }
+
+    match /cyber_news/{newsId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /articles_guides/{articleId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /security_tips/{tipId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /scam_alerts/{alertId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /cyber_report_guides/{guideId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /learning_content/{contentId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /premium_config/{configId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+    // A user can access only their own premium entitlement.
+    match /premium_entitlements/{uid} {
+      // Premium entitlements are server-managed after Google Play verification.
+      // The owner may delete their own record during account deletion, but
+      // cannot create/update it and therefore cannot self-grant Premium.
+      allow read: if request.auth != null
+        && request.auth.uid == uid;
+      allow delete: if request.auth != null
+        && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Course entitlements are server-managed by the payment/content backend.
+    match /course_entitlements/{entitlementId} {
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+  }
+}

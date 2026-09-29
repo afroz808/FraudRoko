@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "860154648601",
+    "project_id": "fraudroko-654c1",
+    "storage_bucket": "fraudroko-654c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860154648601:android:eb8eac3e3316af63d2f288",
+        "android_client_info": {
+          "package_name": "com.fraudroko.fraudroko_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "860154648601-e5rkogo77932n6pron01kd31jk58s3qd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fraudroko.fraudroko_app",
+            "certificate_hash": "bf799dcefcf15978b25b7711dbb50254d69935e9"
+          }
+        },
+        {
+          "client_id": "860154648601-u2h6tb297vhpqalk732lgq7s257ss7pr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fraudroko.fraudroko_app",
+            "certificate_hash": "8380e06888458ab14d4513027a92484502653ab5"
+          }
+        },
+        {
+          "client_id": "860154648601-mo8n9be8h21d5ur6fitt5bnh4iaf9sc3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJ9ICPtAbJakIoaIg7zoSmbIJy8AF1u8g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "860154648601-mo8n9be8h21d5ur6fitt5bnh4iaf9sc3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

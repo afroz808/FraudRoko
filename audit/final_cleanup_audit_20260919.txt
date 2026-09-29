@@ -1,0 +1,36 @@
+FraudRoko final cleanup audit - 2026-09-19
+
+Source base: FraudRoko_reports_same_scan_premium_popup_20260919.zip
+
+Targeted cleanup performed:
+1. Removed unused catch variable in login_screen.dart.
+2. Added mounted guard before using BuildContext after await in premium_purchase_screen.dart.
+3. Removed only analyzer-reported redundant nested const keywords in security_scan_screen.dart.
+
+Preserved:
+- Login/Google login flow
+- 2 free scans per app installation; third scan Premium gate
+- report 2-free-limit premium popup integration
+- Notification Access logic
+- Google Play Billing Premium flow
+- Google Play purchase/restore flow with server-side verification function; deployment is required before production entitlement is enabled
+- Existing backups and project files
+
+Important external setup still required before release:
+- Configure Google Play subscriptions fraudroko_premium_monthly and fraudroko_premium_yearly in Play Console with the intended prices.
+- Complete closed/internal testing and purchase/restore/expiry tests.
+
+Validation limitation:
+- This environment does not have Flutter SDK available, so flutter analyze/build cannot be executed here.
+- User's latest supplied log showed APK build/install succeeded but Flutter lost the device connection after VM startup.
+
+Additional production hardening added:
+- Added Google Play Real-time Developer Notification (RTDN) Pub/Sub handler.
+- The handler refreshes premium entitlement from the Google Play Developer API using the hashed purchase token binding.
+- It does not store the raw Google Play purchase token.
+- Pub/Sub topic expected by code: google-play-rtdn.
+
+Validation performed in this environment:
+- Node.js syntax check of functions/index.js: passed.
+- ZIP integrity check: passed.
+- Flutter analyzer/build could not be run here because Flutter SDK is not installed in this environment.

@@ -1,0 +1,7 @@
+name = "fraudroko-link-scanner"
+main = "src/index.js"
+compatibility_date = "2026-08-31"
+
+[[kv_namespaces]]
+binding = "SCAN_URLS"
+id = "38be6e1e5a6847e1965c88ebfc2ad688"
